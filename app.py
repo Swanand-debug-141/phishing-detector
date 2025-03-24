@@ -2,24 +2,24 @@ from flask import Flask, request, jsonify
 import joblib
 import pandas as pd
 
-# Load the trained model and feature names
-model = joblib.load("phishing_model.pkl")
-feature_names = joblib.load("feature_names.pkl")  # Load feature names from training
+# Load the new XGBoost model and selected features
+model = joblib.load("phishing_model_xgb.pkl")
+selected_features = joblib.load("selected_features.pkl")
 
 # Define Flask App
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Phishing Website Detection API is Running!"
+    return "Phishing Website Detection API is Running with XGBoost!"
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         data = request.json
 
-        # Convert input to DataFrame with correct feature names
-        input_data = pd.DataFrame([data], columns=feature_names)
+        # Convert input to DataFrame with selected features
+        input_data = pd.DataFrame([data], columns=selected_features)
 
         # Make prediction
         prediction = model.predict(input_data)

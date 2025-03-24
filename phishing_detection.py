@@ -1,9 +1,10 @@
 # Import necessary libraries
 import pandas as pd
 import joblib
+import xgboost as xgb
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.feature_selection import SelectKBest, f_classif
 
 # Step 1: Load Dataset
 df = pd.read_csv("dataset.csv")  # Load dataset
@@ -18,33 +19,32 @@ if 'id' in df.columns:
 X = df.drop(columns=['CLASS_LABEL'])  # Drop target column
 y = df['CLASS_LABEL']  # Target variable
 
-# Get feature names for API use
-feature_names = list(X.columns)
-print("Features Used for Training:", feature_names)
+# Step 3: Feature Selection (Select top 20 best features)
+selector = SelectKBest(score_func=f_classif, k=20)
+X_selected = selector.fit_transform(X, y)
 
-# Step 3: Split Data into Training and Testing Sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Get selected feature names for API use
+selected_features = X.columns[selector.get_support()]
+print("Selected Features:", selected_features)
 
-print(f"Training Data Shape: {X_train.shape}")
-print(f"Testing Data Shape: {X_test.shape}")
+# Step 4: Split Data into Training and Testing Sets
+X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size=0.2, random_state=42)
 
-# Step 4: Train Machine Learning Model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
+# Step 5: Train XGBoost Model
+model = xgb.XGBClassifier(n_estimators=200, learning_rate=0.1, max_depth=6, use_label_encoder=False, eval_metric='logloss')
 model.fit(X_train, y_train)
 
-print("Model Training Completed!")
+print("XGBoost Model Training Completed!")
 
-# Step 5: Make Predictions
+# Step 6: Make Predictions
 y_pred = model.predict(X_test)
 
-# Step 6: Evaluate Model Performance
+# Step 7: Evaluate Model Performance
 accuracy = accuracy_score(y_test, y_pred)
 print(f"Model Accuracy: {accuracy:.2f}")
-
 print("Classification Report:\n", classification_report(y_test, y_pred))
-print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
 
-# Step 7: Save Model and Feature Names for API
-joblib.dump(model, "phishing_model.pkl")
-joblib.dump(feature_names, "feature_names.pkl")  # Save feature names separately
-print("Model and Feature Names saved successfully!")
+# Step 8: Save Model and Feature Names for API
+joblib.dump(model, "phishing_model_xgb.pkl")
+joblib.dump(selected_features.tolist(), "selected_features.pkl")  # Save selected feature names
+print("Model and Selected Features saved successfully!")
